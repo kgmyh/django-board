@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% load bootstrap4 %}
+{% block title %}로그인{% endblock title %}
+{% block contents %}
+<form method='post'>
+    {% csrf_token %}
+    {% bootstrap_form form%}
+    <button type='submit' class='btn btn-primary'>로그인</button>
+</form>
+{% endblock contents%}

@@ -1,0 +1,15 @@
+<!-- home.html -->
+{% extends "layout.html" %}
+{% load static %}  <!--static 태그를 읽어오기(loading)-->
+
+{% block title%}Home{% endblock title %}
+{% block contents %}
+<h1>홈페이지</h1>
+
+<img src='https://www.google.co.kr/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png'><br>
+<img src='/static/lionking.jpg'><br>
+<img src='{% static "lionking.jpg"%}'><br>  <!--staic : /static/-->
+<img src='/static/board/tiger.jpg'><br>
+<img src='{% static "/board/tiger.jpg"%}'><br>
+{% endblock contents %}
+

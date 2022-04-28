@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% load bootstrap4 %}
+{%block title%}글 등록{%endblock title%}
+{%block contents%}
+<!-- action을 생략하면 현재 url(주소창의 url)로 요청한다. -->
+<form method='post' enctype='multipart/form-data'>
+    {% csrf_token %} 
+    {% bootstrap_form form %}
+    <button type='submit' class="btn btn-primary">글등록</button>
+    <button type='reset'  class='btn btn-info'>초기화</button>
+</form>
+{%endblock contents%}

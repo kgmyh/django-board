@@ -1,0 +1,48 @@
+<!-- board/templates/board/post_detail.html -->
+{% extends "layout.html" %}
+
+{% block title%}글상세{% endblock title %}
+
+{% block contents %}
+
+<h1 style="border-bottom: 1px solid gray;padding-bottom:5px;">
+    {{object.pk}}. {{object.title}}
+</h1>
+
+<div style="border-bottom: 1px solid gray;padding-bottom:5px;">
+    <b>작성일시</b>:{{object.create_at|date:"Y/m/d H:i:s"}}
+    <b>수정일시</b>:{{object.update_at|date:"Y/m/d H:i:s"}}
+    <b>글분류</b>:{{object.category.category_name}}
+</div>
+<div style="border-bottom: 1px solid gray;padding-bottom:5px;min-height:100px">
+    <!--글내용 - content-->
+    <!--업로드된 파일을 클릭해서 다운 받을 수 있게 처리 => link -->
+    {% if object.up_file %}
+        다운로드: <a href="{{object.up_file.url}}">{{object.up_file}}</a><br><br>
+    {% endif %}
+    <!--글내용 - content-->
+    {{object.content|linebreaksbr}}
+    <!-- 업로드된 image : 화면에 나오도록 img태그 -->
+    <br>
+    {% if object.up_image %}
+        <img src="{{object.up_image.url}}" width='500'>
+    {% endif %}
+</div>
+<div>
+    <br>
+    <!-- #######로그인처리#######
+        수정/삭제버튼 : 로그인한 사용자 + 글을 작성한 사용자인 경우 나오도록 처리. 
+    -->
+    {% if user.is_authenticated %}
+        {% if user.pk == object.writer.pk %}
+            <a href="{% url 'board:update' object.pk %}" class='btn btn-primary'>글수정</a>
+            <a href="{% url 'board:delete' object.pk %}" class='btn btn-danger' 
+            onclick="return confirm('정말 삭제하겠습니까?')">
+                글삭제
+            </a>
+        {% endif %}
+    {% endif %}
+</div>
+
+
+{% endblock contents %}
