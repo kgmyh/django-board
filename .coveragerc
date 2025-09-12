@@ -1,0 +1,15 @@
+[run]
+branch = True
+source =
+    account
+    board
+omit =
+    */migrations/*
+    manage.py
+    config/*
+    */tests.py
+
+[report]
+show_missing = True
+skip_covered = True
+
