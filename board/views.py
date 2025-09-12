@@ -1,11 +1,11 @@
 # board/views.py
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.views.generic import CreateView, DetailView, UpdateView, ListView
 from django.urls import reverse_lazy
 
-from .forms import PostForm
-from .models import Post
+from .forms import PostForm, CommentForm
+from .models import Post, Comment
 
 ########################################
 # 로그인 처리
@@ -64,6 +64,12 @@ class PostDetailView(DetailView):
     template_name = "board/post_detail.html"
     model = Post 
     # pk로 조회할 Model 클래스. 조회결과를 "post"(모델클래스명을 소문자), "object" 라는 이름으로 template에게 전달.
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Prefetch comments with writer
+        context['comments'] = self.object.comments.select_related('writer').all()
+        context['comment_form'] = CommentForm()
+        return context
 
 
 # 글 수정처리 
@@ -161,3 +167,51 @@ class PostListView(ListView):
 
 
 
+
+########################################
+# 댓글 AJAX View들
+########################################
+from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponseForbidden
+from django.views.decorators.http import require_POST
+from django.template.loader import render_to_string
+
+
+@login_required
+@require_POST
+def comment_create(request, post_pk):
+    post = get_object_or_404(Post, pk=post_pk)
+    form = CommentForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': '내용을 입력하세요.'}, status=400)
+    comment = Comment.objects.create(
+        post=post,
+        writer=get_user(request),
+        content=form.cleaned_data['content']
+    )
+    html = render_to_string('board/_comment_item.html', {'comment': comment, 'user': request.user}, request=request)
+    return JsonResponse({'ok': True, 'html': html, 'id': comment.pk})
+
+
+@login_required
+@require_POST
+def comment_update(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+    if comment.writer != request.user:
+        return HttpResponseForbidden()
+    form = CommentForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': '내용을 입력하세요.'}, status=400)
+    comment.content = form.cleaned_data['content']
+    comment.save(update_fields=['content', 'update_at'])
+    html = render_to_string('board/_comment_item.html', {'comment': comment, 'user': request.user}, request=request)
+    return JsonResponse({'ok': True, 'html': html, 'id': comment.pk})
+
+
+@login_required
+@require_POST
+def comment_delete(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+    if comment.writer != request.user:
+        return HttpResponseForbidden()
+    comment.delete()
+    return JsonResponse({'ok': True})

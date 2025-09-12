@@ -1,6 +1,6 @@
 # board/forms.py
 from django import forms
-from .models import Post
+from .models import Post, Comment
 
 #form 클래스 - forms.Form 상속
 #ModelForm 클래스 - forms.ModelForm 상속
@@ -12,3 +12,9 @@ class PostForm(forms.ModelForm):
         # fields = "__all__" 
 
         exclude = ['writer'] 
+
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['content']

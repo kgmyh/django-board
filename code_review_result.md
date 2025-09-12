@@ -62,7 +62,8 @@
       - 경로에 슬래시(/create/, /list/ 등) 붙이기 + APPEND_SLASH 기본 정책 일관화. 현재 일부 경로는 확장자/슬
   래시 불일치.
   - Admin 커스터마이징:
-      - UserAdmin.fieldsets[1][1]['fields']를 직접 변경하지 말고 class CustomUserAdmin(UserAdmin): fieldsets =
+      - UserAdmin.fieldsets[1][1]['fields']를 직접 변
+      - 경하지 말고 class CustomUserAdmin(UserAdmin): fieldsets =
   UserAdmin.fieldsets + ((...),)처럼 서브클래스에서 정의. 전역 UserAdmin 변경 부작용 가능.
   - import/불필요 코드:
       - account/views.py의 render 미사용.
