@@ -48,10 +48,8 @@ class PostCreateView(CreateView):
     # 로그인한 사용자의 User 모델객체를 insert하기 전에 model에 넣어준다.
     # 매개변수: form - (검증을 통과한) ModelForm을 첫번째 매개변수로 받는다.
     def form_valid(self,  form):
-        
-        post = form.save(commit=False)  #ModelForm.save() : Model 객체가 반환
-        post.writer = get_user(self.request)  #로그인한 User객체
-        # post.save() 최종 update & commit => super에서 처리.
+        # Django 5: ensure instance is populated and saved via super()
+        form.instance.writer = get_user(self.request)
         return super().form_valid(form)
 
 
@@ -134,6 +132,10 @@ class PostListView(ListView):
         # CBV에서 HttpRequest는 self.request로 사용할 수 있다.
 
         # 페이지 그룹의 페이지 범위 조회
+        if paginator.num_pages == 0:
+            context['page_range'] = []
+            return context
+
         start_idx = int((current_page-1)/page_group_count)*page_group_count
         end_idx = start_idx + page_group_count
         page_range = paginator.page_range[start_idx : end_idx]
@@ -148,14 +150,13 @@ class PostListView(ListView):
         context['page_range'] = page_range
         if has_previous:
             context['has_previous'] = has_previous
-            context['previous_page_no'] = start_page.previous_page_number  #시작페이지의 이전 페이지 번호
+            context['previous_page_no'] = start_page.previous_page_number()  # 시작페이지의 이전 페이지 번호
 
         if has_next:
             context['has_next'] = has_next
-            context['next_page_no'] = end_page.next_page_number #마지막 페이지의 다음 페이지 번호
+            context['next_page_no'] = end_page.next_page_number() # 마지막 페이지의 다음 페이지 번호
 
         return context
-
 
 
 

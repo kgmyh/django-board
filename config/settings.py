@@ -21,12 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-x@6-mroei!9=j27g*r^7g8(j8inp7szvtn38rx2&^ytd27q*b%'
+# Django 5: pull from env; provide dev fallback only for local use
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-insecure-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['.ap-northeast-2.compute.amazonaws.com']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '.ap-northeast-2.compute.amazonaws.com,localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -38,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bootstrap4',
+    'django_bootstrap5',
     'board',
     "account"
 ]
@@ -78,23 +79,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql', # engine: mysql
-        'NAME' : 'django_board', # DB Name
-        'USER' : 'kgmyh', # DB User
-        'PASSWORD' : 'tiger', # Password
-        'HOST': 'kgmyh-db.cv0dxfjakxuh.ap-northeast-2.rds.amazonaws.com', # 생성한 데이터베이스 엔드포인트
-        'PORT': '3306', # 데이터베이스 포트
-        'OPTIONS':{
-            'init_command' : "SET sql_mode='STRICT_TRANS_TABLES'"
+DB_ENGINE = os.environ.get('DB_ENGINE', 'sqlite').lower()
+DATABASES = {}
+if DB_ENGINE == 'mysql':
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('MYSQL_DB', 'django_board'),
+        'USER': os.environ.get('MYSQL_USER', 'user'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD', ''),
+        'HOST': os.environ.get('MYSQL_HOST', ''),
+        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
         }
-    },  
-    'sqlite': {
+    }
+else:
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
 
 
 # Password validation
@@ -125,7 +128,7 @@ TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
-USE_L10N = True
+# Django 5: USE_L10N removed; formats are always localized if USE_I18N
 
 USE_TZ = True
 
@@ -138,10 +141,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.2/howto/static-files/
-###############################################################
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.2/howto/static-files/
+# https://docs.djangoproject.com/en/5.0/howto/static-files/
 ###############################################################
 
 # 각 app들, 지정한 static 디렉토리에 있는 static 파일들을 모을 디렉토리. (manage.py collectstatic)
