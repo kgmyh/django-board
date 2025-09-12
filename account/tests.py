@@ -9,18 +9,17 @@ account/tests.py
 - 로그아웃(logout): 보안상 POST 전용이며, 성공 시 302 리다이렉트됩니다.
 """
 
-from django.test import TestCase
-from django.urls import reverse
-from django.contrib.auth import get_user_model
+from django.test import TestCase  # Django 테스트 베이스 클래스
+from django.urls import reverse  # URL name으로 경로 생성
+from django.contrib.auth import get_user_model  # 현재 설정된 User 모델 접근
 
 
-class AccountFBVTests(TestCase):
-    """계정 관련 FBV의 기본 시나리오 검증"""
+class AccountFBVTests(TestCase):  # 계정 관련 FBV의 기본 시나리오 검증
 
     def test_join_get(self):
         """GET /account/join: 가입 폼 화면이 잘 렌더링되는지 (200 OK) 확인합니다."""
-        resp = self.client.get(reverse('account:join'))
-        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(reverse('account:join'))  # 가입 폼 화면 요청
+        self.assertEqual(resp.status_code, 200)  # 200 OK 기대
 
     def test_join_post_and_login_logout(self):
         """
@@ -30,24 +29,24 @@ class AccountFBVTests(TestCase):
         - 로그아웃: POST 전용 엔드포인트로 302 리다이렉트
         """
         # 1) 가입 (POST)
-        data = {
+        data = {  # 유효한 가입 데이터 구성
             'username': 'user1',
-            'password1': 'pass1234AB',
-            'password2': 'pass1234AB',
+            'password1': 'pass1234AB',  # UserCreationForm의 첫 비밀번호 필드
+            'password2': 'pass1234AB',  # 확인용 비밀번호(일치해야 함)
             'name': '유저',
             'email': 'u@e.st',
             'gender': 'M',
         }
-        resp = self.client.post(reverse('account:join'), data)
-        self.assertEqual(resp.status_code, 302)
-        self.assertTrue(get_user_model().objects.filter(username='user1').exists())
+        resp = self.client.post(reverse('account:join'), data)  # 가입 POST
+        self.assertEqual(resp.status_code, 302)  # 성공 시 리다이렉트
+        self.assertTrue(get_user_model().objects.filter(username='user1').exists())  # 사용자 생성 확인
 
         # 2) 로그인 (POST)
-        resp = self.client.post(reverse('account:login'), {
+        resp = self.client.post(reverse('account:login'), {  # 로그인 POST
             'username': 'user1', 'password': 'pass1234AB'
         })
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 302)  # 성공 시 리다이렉트
 
         # 3) 로그아웃 (POST-only)
-        resp = self.client.post(reverse('account:logout'))
-        self.assertEqual(resp.status_code, 302)
+        resp = self.client.post(reverse('account:logout'))  # 로그아웃 POST (보안상 POST 전용)
+        self.assertEqual(resp.status_code, 302)  # 홈으로 리다이렉트 기대
