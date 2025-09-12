@@ -51,7 +51,7 @@
   {% for c in comments %}
     {% include 'board/_comment_item.html' with comment=c %}
   {% empty %}
-    <p class="text-muted">등록된 댓글이 없습니다.</p>
+    <p class="text-muted" data-empty="1">등록된 댓글이 없습니다.</p>
   {% endfor %}
   </div>
 
@@ -101,6 +101,8 @@ if (createForm) {
     const data = await res.json();
     if (data.ok) {
       const container = document.getElementById('comments');
+      const emptyEl = container.querySelector('[data-empty]');
+      if (emptyEl) emptyEl.remove();
       const wrapper = document.createElement('div');
       wrapper.innerHTML = data.html;
       container.appendChild(wrapper.firstElementChild);
@@ -125,7 +127,17 @@ document.getElementById('comments').addEventListener('click', async (e) => {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.ok) item.remove();
+      if (data.ok) {
+        item.remove();
+        const container = document.getElementById('comments');
+        if (!container.querySelector('[data-comment-id]')) {
+          const p = document.createElement('p');
+          p.className = 'text-muted';
+          p.setAttribute('data-empty','1');
+          p.textContent = '등록된 댓글이 없습니다.';
+          container.appendChild(p);
+        }
+      }
     }
   }
 
