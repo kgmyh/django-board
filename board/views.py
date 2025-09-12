@@ -1,8 +1,6 @@
 # board/views.py
 
-from django.shortcuts import redirect, get_object_or_404
-from django.views.generic import CreateView, DetailView, UpdateView, ListView
-from django.urls import reverse_lazy
+from django.shortcuts import redirect, get_object_or_404, render
 
 from .forms import PostForm, CommentForm
 from .models import Post, Comment
@@ -11,8 +9,8 @@ from .models import Post, Comment
 # 로그인 처리
 ########################################
 from django.contrib.auth.decorators import login_required #로그인여부를 확인해서 로그인 안한경우 settings.py의 LOGIN_URL의 경로로 이동.
-from django.utils.decorators import method_decorator # class의 메소드에 decorator를 선언해 주는 decorator
 from django.contrib.auth import get_user  # 로그인한 사용자의 User Model객체를 반환.
+from django.core.paginator import Paginator
 
 
 # 글등록
@@ -29,28 +27,18 @@ from django.contrib.auth import get_user  # 로그인한 사용자의 User Model
 # 로그인 한 사용자만 호출할 수 있는 기능.
 # 글 작성자를 추가.
 #  writer => 글을 작성한(로그인한) 사용자의 CustomUser객체를 사용.
-@method_decorator(login_required, name='dispatch')  #dispatch()메소드에 @login_required 장식자를 적용.
-class PostCreateView(CreateView):
-    template_name = 'board/post_create.html'
-    form_class = PostForm
-    # success_url = reverse_lazy("board:detail")    #등록 처리후 이동할 경로->redirect방식이동=>view의 url을 등록 
-
-    # success_url 설정을 대신
-    #   success_url에서 insert한 Model객체를 접근하려면 이 메소드를 overriding 해야 한다.
-    #   insert한 모델객체 조회: self.objects
-    def get_success_url(self):
-        # 반환값: 등록 성공후 redirect 방식으로 이동할 View의 url을 문자열로 반환.
-        return reverse_lazy('board:detail', args=[self.object.pk]) # args: path parameter로 전달할 값들을 리스트에 순서대로 담는다.
-
-    ##################################
-    # form_valid(): CreateView, UpdateView에서 Post 요청 처리시 insert/delete 하기 전/후로 해야 하는 작업이 있을 경우 form_valid()를 오버라이딩 한다.
-    # 
-    # 로그인한 사용자의 User 모델객체를 insert하기 전에 model에 넣어준다.
-    # 매개변수: form - (검증을 통과한) ModelForm을 첫번째 매개변수로 받는다.
-    def form_valid(self,  form):
-        # Django 5: ensure instance is populated and saved via super()
-        form.instance.writer = get_user(self.request)
-        return super().form_valid(form)
+@login_required
+def post_create(request):
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.writer = request.user
+            post.save()
+            return redirect('board:detail', post.pk)
+    else:
+        form = PostForm()
+    return render(request, 'board/post_create.html', {'form': form})
 
 
 # 하나의 글 정보 조회 (pk)
@@ -60,16 +48,15 @@ class PostCreateView(CreateView):
 # 속성
 #   - template_name: 응답할 template의 경로.
 #   - model: PK로 조회할 모델클래스
-class PostDetailView(DetailView):
-    template_name = "board/post_detail.html"
-    model = Post 
-    # pk로 조회할 Model 클래스. 조회결과를 "post"(모델클래스명을 소문자), "object" 라는 이름으로 template에게 전달.
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Prefetch comments with writer
-        context['comments'] = self.object.comments.select_related('writer').all()
-        context['comment_form'] = CommentForm()
-        return context
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    comments = post.comments.select_related('writer').all()
+    context = {
+        'object': post,
+        'comments': comments,
+        'comment_form': CommentForm(),
+    }
+    return render(request, 'board/post_detail.html', context)
 
 
 # 글 수정처리 
@@ -81,14 +68,20 @@ class PostDetailView(DetailView):
 #   - form_class: Form/ModelForm 클래스 등록
 #   - model : Model 클래스 등록 (수정폼 template에 전달할 값을 조회하기 위해)
 #   - success_url: 수정 처리후 redirect 방식으로 이동할 View의 url (path parameter로 update한 Model정보를 사용할 경우 get_success_url() 를 오버라이딩.)
-@method_decorator(login_required, 'dispatch')
-class PostUpdateView(UpdateView):
-    template_name = "board/post_update.html"
-    form_class = PostForm
-    model = Post
-    
-    def get_success_url(self):
-        return reverse_lazy('board:detail', args=[self.object.pk])
+@login_required
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if post.writer != request.user:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect('board:detail', post.pk)
+    else:
+        form = PostForm(instance=post)
+    return render(request, 'board/post_update.html', {'form': form})
 
 
 # 삭제처리
@@ -98,8 +91,10 @@ class PostUpdateView(UpdateView):
 # 로그인 한 사용자만 호출 가능
 @login_required
 def post_delete(request, pk):
-    
-    post = Post.objects.get(pk=pk) 
+    post = get_object_or_404(Post, pk=pk)
+    if post.writer != request.user:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
     post.delete()
     return redirect("/") 
 
@@ -112,57 +107,38 @@ def post_delete(request, pk):
 #  ListView는 paging기능 지원
 
 # 페이징 처리 적용 ListView
-class PostListView(ListView):
-    template_name = "board/post_list.html"    
-    model = Post
-   
-    # 페이징 처리 
-    #  class변수: paginate_by = 한페이지의 데이터 개수
-    #  요청시 url : url?page=번호   http://127.0.0.1:8000/board/list?page=2   page를 생략하면 1번페이지를 조회.
-    #  페이지 번호를 template에서 출력하기 위한 값들을 만들어서 template에 전달. => get_context_data()를 오버라이딩
-    paginate_by = 10  #한페이지에 10개씩 
+def post_list(request):
+    qs = Post.objects.all()
+    paginator = Paginator(qs, 10)
+    page_no = request.GET.get('page', '1')
+    page_obj = paginator.get_page(page_no)
 
-    # context data: view가 template에게 전달하는 값(dictionary). key-value쌍.  key: context name, value: context value
-    # get_context_data(): Generic View를 구현할 때 template에게 추가적으로 전달해야하는 context data가 있을때 오버라이딩.
-    # 페이징관련 값들을 context data에 추가
-    #  - 이전/다음 페이지 그룹 유무(그룹의 시작/끝페이지)
-    #  - 이전/다음 페이지 번호(그룹의 시작/끝페이지)
-    #  - 현재 페이지 속한 페이지 그룹의 페이지 범위(시작 ~ 끝 페이지번호)
-    def get_context_data(self, **kwargs):
-        # 부모객체의 get_context_data()를 호출해서 generic view가 자동으로 생성한 Context data를 받아온다.
-        context = super().get_context_data(**kwargs)
-        # ListView에서 paginate_by 속성을 설정하면 context data에 Paginator객체가 등록된다.
-        paginator = context['paginator']
-        page_group_count = 10 #페이지그룹에 속한 페이지 개수
-        current_page = int(self.request.GET.get('page', 1))
-        # CBV에서 HttpRequest는 self.request로 사용할 수 있다.
+    context = {
+        'object_list': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': paginator.num_pages > 1,
+    }
 
-        # 페이지 그룹의 페이지 범위 조회
-        if paginator.num_pages == 0:
-            context['page_range'] = []
-            return context
-
+    page_group_count = 10
+    current_page = int(page_no or 1)
+    if paginator.num_pages:
         start_idx = int((current_page-1)/page_group_count)*page_group_count
         end_idx = start_idx + page_group_count
-        page_range = paginator.page_range[start_idx : end_idx]
-
-        # 그룹의 시작 페이지가 이전페이지가 있는지, 그룹의 마지막 페이지가 다음페이지가 있는지 여부 + 페이지 번호
-        start_page = paginator.page(page_range[0]) #시작 페이지의 Page객체
-        end_page = paginator.page(page_range[-1]) # 마지막 페이지의 Page객체
-
-        has_previous = start_page.has_previous() #시작의 이전페이지가 있는지 여부
-        has_next = end_page.has_next() # 마지막 페이지의 다음 페이지가 있는지 여부
-
+        page_range = list(paginator.page_range)[start_idx:end_idx]
         context['page_range'] = page_range
-        if has_previous:
-            context['has_previous'] = has_previous
-            context['previous_page_no'] = start_page.previous_page_number()  # 시작페이지의 이전 페이지 번호
+        start_page = paginator.page(page_range[0])
+        end_page = paginator.page(page_range[-1])
+        if start_page.has_previous():
+            context['has_previous'] = True
+            context['previous_page_no'] = start_page.previous_page_number()
+        if end_page.has_next():
+            context['has_next'] = True
+            context['next_page_no'] = end_page.next_page_number()
+    else:
+        context['page_range'] = []
 
-        if has_next:
-            context['has_next'] = has_next
-            context['next_page_no'] = end_page.next_page_number() # 마지막 페이지의 다음 페이지 번호
-
-        return context
+    return render(request, 'board/post_list.html', context)
 
 
 
