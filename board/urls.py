@@ -11,5 +11,8 @@ urlpatterns = [
     path('update/<int:pk>', views.PostUpdateView.as_view(), name='update'), #글 수정 url. GET: 수정할 게시물의 pk을 path parameter 받아야함.
     path('delete/<int:pk>', views.post_delete, name='delete'), #삭제처리.
     path('list', views.PostListView.as_view(), name='list'), #글 목록 조회.
+    # 댓글
+    path('post/<int:post_pk>/comments/create', views.comment_create, name='comment_create'),
+    path('comments/<int:pk>/update', views.comment_update, name='comment_update'),
+    path('comments/<int:pk>/delete', views.comment_delete, name='comment_delete'),
 ] 
-

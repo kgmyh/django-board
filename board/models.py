@@ -41,3 +41,18 @@ class Post(models.Model):
 
     class Meta:
         ordering = ["-pk"]
+
+
+# 댓글
+class Comment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments', verbose_name='게시글')
+    writer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, verbose_name='작성자')
+    content = models.TextField(verbose_name='댓글 내용')
+    create_at = models.DateTimeField(verbose_name='작성일시', auto_now_add=True)
+    update_at = models.DateTimeField(verbose_name='수정일시', auto_now=True)
+
+    def __str__(self):
+        return f"{self.writer}: {self.content[:20]}"
+
+    class Meta:
+        ordering = ["pk"]

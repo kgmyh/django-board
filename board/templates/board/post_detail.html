@@ -45,4 +45,144 @@
 </div>
 
 
+<h4 class="mb-1">댓글</h4>
+<hr class="mt-1 mb-3" style="width:50%; margin-left:0;">
+<div id="comments" class="mb-3">
+  {% for c in comments %}
+    {% include 'board/_comment_item.html' with comment=c %}
+  {% empty %}
+    <p class="text-muted" data-empty="1">등록된 댓글이 없습니다.</p>
+  {% endfor %}
+  </div>
+
+{% if user.is_authenticated %}
+<form id="comment-create-form" class="mb-4">
+  {% csrf_token %}
+  <div class="form-group">
+    <textarea name="content" class="form-control" rows="3" placeholder="댓글을 입력하세요"></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary mt-2">댓글 등록</button>
+</form>
+{% else %}
+  <p class="text-muted">댓글 작성은 로그인 후 가능합니다.</p>
+{% endif %}
+
+<script>
+// CSRF helper
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Create comment
+const createForm = document.getElementById('comment-create-form');
+if (createForm) {
+  createForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const content = createForm.querySelector('textarea[name="content"]').value.trim();
+    if (!content) return;
+    const res = await fetch('{% url "board:comment_create" object.pk %}', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken },
+      body: new URLSearchParams({ content })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.ok) {
+      const container = document.getElementById('comments');
+      const emptyEl = container.querySelector('[data-empty]');
+      if (emptyEl) emptyEl.remove();
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = data.html;
+      container.appendChild(wrapper.firstElementChild);
+      createForm.reset();
+    }
+  });
+}
+
+// Delegate edit/delete actions
+document.getElementById('comments').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const item = btn.closest('[data-comment-id]');
+  const id = item.getAttribute('data-comment-id');
+  const action = btn.getAttribute('data-action');
+
+  if (action === 'delete') {
+    if (!confirm('정말 삭제하겠습니까?')) return;
+    const res = await fetch('{% url "board:comment_delete" 0 %}'.replace('0', id), {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrftoken }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok) {
+        item.remove();
+        const container = document.getElementById('comments');
+        if (!container.querySelector('[data-comment-id]')) {
+          const p = document.createElement('p');
+          p.className = 'text-muted';
+          p.setAttribute('data-empty','1');
+          p.textContent = '등록된 댓글이 없습니다.';
+          container.appendChild(p);
+        }
+      }
+    }
+  }
+
+  if (action === 'edit') {
+    // Switch to edit mode
+    const contentEl = item.querySelector('[data-role="content"]');
+    const original = contentEl.textContent;
+    contentEl.innerHTML = '';
+    const textarea = document.createElement('textarea');
+    textarea.className = 'form-control';
+    textarea.value = original.trim();
+    contentEl.appendChild(textarea);
+
+    const actionsEl = item.querySelector('[data-role="actions"]');
+    const old = actionsEl.innerHTML;
+    actionsEl.innerHTML = '<button class="btn btn-sm btn-primary" data-action="save">수정</button> <button class="btn btn-sm btn-secondary" data-action="cancel">취소</button>';
+
+    const onCancel = () => {
+      contentEl.textContent = original;
+      actionsEl.innerHTML = old;
+    };
+
+    actionsEl.querySelector('[data-action="cancel"]').addEventListener('click', (ev) => {
+      ev.preventDefault(); onCancel();
+    }, { once: true });
+
+    actionsEl.querySelector('[data-action="save"]').addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      const newContent = textarea.value.trim();
+      const res = await fetch('{% url "board:comment_update" 0 %}'.replace('0', id), {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: new URLSearchParams({ content: newContent })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.ok) {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = data.html;
+        item.replaceWith(wrapper.firstElementChild);
+      }
+    }, { once: true });
+  }
+});
+</script>
+
+
 {% endblock contents %}
