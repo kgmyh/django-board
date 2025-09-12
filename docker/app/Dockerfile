@@ -21,7 +21,7 @@ COPY . .
 RUN adduser --disabled-password --gecos '' django \
     && chown -R django:django /app \
     && chmod +x docker/app/entrypoint.sh
-USER django
+# Keep running as root for volume ownership fixes in entrypoint; gunicorn runs as django
 
 # Reasonable defaults for container
 ENV DJANGO_DEBUG=False \
@@ -31,4 +31,3 @@ ENV DJANGO_DEBUG=False \
 EXPOSE 8000
 
 ENTRYPOINT ["/app/docker/app/entrypoint.sh"]
-
