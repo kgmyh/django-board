@@ -12,7 +12,7 @@
 <div style="border-bottom: 1px solid gray;padding-bottom:5px;">
     <b>작성일시</b>:{{object.create_at|date:"Y/m/d H:i:s"}}
     <b>수정일시</b>:{{object.update_at|date:"Y/m/d H:i:s"}}
-    <b>글분류</b>:{{object.category.category_name}}
+    <b>글분류</b>:{% if object.category %}{{object.category.category_name}}{% else %}-{% endif %}
 </div>
 <div style="border-bottom: 1px solid gray;padding-bottom:5px;min-height:100px">
     <!--글내용 - content-->

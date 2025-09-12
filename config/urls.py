@@ -27,7 +27,10 @@ urlpatterns = [
 ############################################################
 # 업로드된 파일을 client가 요청할 수 있도록 처리.
 ############################################################
-from django.conf.urls.static import static 
-from . import settings   #config/settings.py 임포트
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  
-#UPLOAD된 파일들을 STATIC 파일로 서비스하기 위한 설정(url 시작 path, media 파일의 root 디렉토리.)
+from django.conf.urls.static import static
+from . import settings   # config/settings.py 임포트
+
+# 개발 모드에서만 업로드 파일 제공
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # UPLOAD된 파일들을 STATIC 파일로 서비스하기 위한 설정(url 시작 path, media 파일의 root 디렉토리.)
