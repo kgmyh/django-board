@@ -97,6 +97,22 @@
 
 - 쿼리/성능 관련
   - 특정 코드 경로에서 쿼리 수 검증: `with self.assertNumQueries(n): ...`
+  - 예시 (RequestFactory로 뷰 직접 호출, 부수 쿼리 최소화):
+    ```python
+    from django.test import RequestFactory
+    from board.views import post_detail
+
+    rf = RequestFactory()
+    request = rf.get(f'/board/detail/{post.pk}')
+    request.user = user
+
+    # 상세 뷰는 다음 쿼리를 수행한다고 가정(총 4회):
+    # 1) 게시글 조회, 2) 댓글 목록 조회(select_related),
+    # 3) 템플릿에서 카테고리 접근, 4) 템플릿에서 작성자 접근
+    with self.assertNumQueries(4):
+        response = post_detail(request, post.pk)
+        self.assertEqual(response.status_code, 200)
+    ```
 
 - 부정(에러) 케이스도 꼭
   - 폼 유효성 실패(필수 값 누락), 권한 실패, 존재하지 않는 리소스(404) 등
