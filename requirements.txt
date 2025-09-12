@@ -7,3 +7,4 @@ pillow==10.4.0
 soupsieve==2.6
 sqlparse==0.5.1
 python-dotenv==1.0.1
+gunicorn==22.0.0
