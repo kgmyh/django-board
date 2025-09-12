@@ -45,8 +45,8 @@
 </div>
 
 
-<hr>
-<h4>댓글</h4>
+<h4 class="mb-1">댓글</h4>
+<hr class="mt-1 mb-3" style="width:50%; margin-left:0;">
 <div id="comments" class="mb-3">
   {% for c in comments %}
     {% include 'board/_comment_item.html' with comment=c %}
